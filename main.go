@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -17,20 +18,18 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"time"
-)
-
-const (
-	host     = "manny-master.local"
-	port     = 30432
-	user     = "postgres"
-	password = "JyxXWxxGMz"
-	dbname   = "manny-reminder"
 )
 
 var bindAddress = ":8080"
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	err, config := getOAuthConfig()
 
 	l := log.New(os.Stdout, "manny-reminder ", log.LstdFlags)
@@ -94,9 +93,17 @@ func main() {
 }
 
 func getDb(err error) *sql.DB {
+	host := os.Getenv("PGSQL_HOST")
+	port, err := strconv.Atoi(os.Getenv("PGSQL_PORT"))
+	if err != nil {
+		log.Fatalf("PGSQL_PORT is in invalid format, should be int")
+	}
+	user := os.Getenv("PGSQL_USER")
+	password := os.Getenv("PGSQL_PASSWORD")
+	dbname := os.Getenv("PGSQL_DB")
 	connStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
-	// Connect to database
+
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {
 		panic(err)

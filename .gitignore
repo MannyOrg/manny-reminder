@@ -222,3 +222,4 @@ credentials.json
 token.json
 users/*
 .idea/*
+.env
