@@ -6,6 +6,11 @@ import (
 	"manny-reminder/pkg/models"
 )
 
+type IRepository interface {
+	GetUsers() ([]models.User, error)
+	AddUser(authCode string) error
+}
+
 type Repository struct {
 	l  *log.Logger
 	db *sql.DB

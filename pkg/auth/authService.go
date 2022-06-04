@@ -20,7 +20,7 @@ type IService interface {
 
 type Service struct {
 	l      *log.Logger
-	r      *Repository
+	r      IRepository
 	config *oauth2.Config
 }
 
