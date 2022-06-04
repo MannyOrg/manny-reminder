@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 	"log"
 	"manny-reminder/pkg/models"
@@ -11,11 +12,11 @@ import (
 )
 
 type IService interface {
-	AddUser(authCode string) error
+	SaveUser(authCode string) error
 	GetUsers() ([]models.User, error)
 	GetTokenFromWeb() string
-	SaveToken(path string, token *oauth2.Token)
 	GetClient(user string) *http.Client
+	GetUser(id string) (models.User, error)
 }
 
 type Service struct {
@@ -24,12 +25,16 @@ type Service struct {
 	config *oauth2.Config
 }
 
-func NewAuth(l *log.Logger, r *Repository, config *oauth2.Config) *Service {
+func NewService(l *log.Logger, r IRepository, config *oauth2.Config) *Service {
 	return &Service{l, r, config}
 }
 
 func (s Service) GetUsers() ([]models.User, error) {
 	return s.r.GetUsers()
+}
+
+func (s Service) GetUser(userId string) (models.User, error) {
+	return s.r.GetUser(userId)
 }
 
 // GetClient Retrieve a token, saves the token, then returns the generated client.
@@ -67,26 +72,22 @@ func (s *Service) tokenFromFile(file string) (*oauth2.Token, error) {
 	return tok, err
 }
 
-// SaveToken Saves a token to a file path.
-func (s *Service) SaveToken(path string, token *oauth2.Token) {
-	s.l.Printf("Saving credential file to: %s\n", path)
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+func (s Service) SaveUser(authCode string) error {
+	tok, err := s.config.Exchange(context.TODO(), authCode)
 	if err != nil {
-		s.l.Fatalf("Unable to cache oauth token: %v", err)
+		log.Fatalf("Unable to read authorization code: %v", err)
 	}
-	defer func(f *os.File) {
-		err := f.Close()
-		if err != nil {
-			s.l.Fatalf(err.Error())
-		}
-	}(f)
-	err = json.NewEncoder(f).Encode(token)
-	if err != nil {
-		s.l.Fatalf(err.Error())
-		return
-	}
-}
+	userId := uuid.NewString()
 
-func (s *Service) AddUser(authCode string) error {
-	return s.r.AddUser(authCode)
+	ts, err := json.Marshal(tok)
+	if err != nil {
+		return err
+	}
+
+	err = s.r.AddUser(userId, string(ts))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

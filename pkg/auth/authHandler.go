@@ -37,9 +37,11 @@ func (h *Handler) AddUser(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) SaveUser(w http.ResponseWriter, r *http.Request) {
 	authCode := r.URL.Query().Get("code")
-	err := h.as.AddUser(authCode)
+	err := h.as.SaveUser(authCode)
 	if err != nil {
 		utils.SendHttpError(w, err)
 		return
 	}
+
+	http.Redirect(w, r, "/users", http.StatusSeeOther)
 }

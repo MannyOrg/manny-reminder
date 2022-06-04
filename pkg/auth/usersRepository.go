@@ -8,7 +8,8 @@ import (
 
 type IRepository interface {
 	GetUsers() ([]models.User, error)
-	AddUser(authCode string) error
+	AddUser(authCode string, token string) error
+	GetUser(id string) (models.User, error)
 }
 
 type Repository struct {
@@ -23,7 +24,7 @@ func NewRepository(l *log.Logger, db *sql.DB) *Repository {
 func (r Repository) GetUsers() ([]models.User, error) {
 	var res models.User
 	var users []models.User
-	rows, err := r.db.Query("SELECT id, email FROM users")
+	rows, err := r.db.Query("SELECT id, email, token FROM users")
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +35,7 @@ func (r Repository) GetUsers() ([]models.User, error) {
 		}
 	}()
 	for rows.Next() {
-		err := rows.Scan(&res.Id, &res.Email)
+		err := rows.Scan(&res.Id, &res.Email, &res.Token)
 		if err != nil {
 			return nil, err
 		}
@@ -43,8 +44,19 @@ func (r Repository) GetUsers() ([]models.User, error) {
 	return users, nil
 }
 
-func (r Repository) AddUser(id string) error {
-	_, err := r.db.Exec("INSERT INTO users (id) VALUES ($1)", id)
+func (r Repository) GetUser(userId string) (models.User, error) {
+	var user models.User
+	row := r.db.QueryRow("SELECT id, email, token FROM users WHERE id = $1 LIMIT 1", userId)
+	err := row.Scan(&user.Id, &user.Email, &user.Token)
+	if err != nil {
+		return models.User{}, err
+	}
+
+	return user, nil
+}
+
+func (r Repository) AddUser(id, token string) error {
+	_, err := r.db.Exec("INSERT INTO users (id, token) VALUES ($1, $2)", id, token)
 	if err != nil {
 		return err
 	}

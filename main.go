@@ -36,7 +36,7 @@ func main() {
 	db := getDb(err)
 
 	ar := auth.NewRepository(l, db)
-	as := auth.NewAuth(l, ar, config)
+	as := auth.NewService(l, ar, config)
 	ah := auth.NewHandler(as)
 
 	er := events.NewRepository(l, db)
@@ -50,6 +50,7 @@ func main() {
 	getR.HandleFunc("/users/add", ah.AddUser)
 	getR.HandleFunc("/users/save", ah.SaveUser)
 	getR.HandleFunc("/users/events", eh.GetUsersEvents)
+	getR.HandleFunc("/users/{userId}/events", eh.GetUserEvents)
 
 	// create a new server
 	s := http.Server{
