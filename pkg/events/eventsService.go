@@ -12,8 +12,8 @@ import (
 )
 
 type IService interface {
-	GetUsersEvents() (map[string][]models.Event, error)
-	GetUserEvents(userId string) ([]models.Event, error)
+	GetUsersEvents(pageToken string, size int) (map[string]models.EventsResponse, error)
+	GetUserEvents(userId string, pageToken string, size int) (models.EventsResponse, error)
 }
 
 type Service struct {
@@ -27,15 +27,15 @@ func NewEvents(r *Repository, l *log.Logger, as auth.IService, c calendar2.ICale
 	return &Service{l: l, r: r, as: as, c: c}
 }
 
-func (s Service) GetUsersEvents() (map[string][]models.Event, error) {
-	response := make(map[string][]models.Event)
+func (s Service) GetUsersEvents(pageToken string, size int) (map[string]models.EventsResponse, error) {
+	response := make(map[string]models.EventsResponse)
 	users, err := s.as.GetUsers()
 	if err != nil {
 		return nil, err
 	}
 	ctx := context.Background()
 	for _, user := range users {
-		events, err := s.getUserEvents(ctx, &user)
+		events, err := s.getUserEvents(ctx, &user, pageToken, size)
 		if err != nil {
 			return nil, err
 		}
@@ -45,29 +45,29 @@ func (s Service) GetUsersEvents() (map[string][]models.Event, error) {
 	return response, nil
 }
 
-func (s Service) GetUserEvents(userId string) ([]models.Event, error) {
+func (s Service) GetUserEvents(userId string, pageToken string, size int) (models.EventsResponse, error) {
 	user, err := s.as.GetUser(userId)
 	if err != nil {
-		return nil, err
+		return models.EventsResponse{}, err
 	}
 	ctx := context.Background()
-	events, err := s.getUserEvents(ctx, &user)
+	events, err := s.getUserEvents(ctx, &user, pageToken, size)
 	if err != nil {
-		return nil, err
+		return models.EventsResponse{}, err
 	}
 
 	return events, nil
 }
 
-func (s Service) getUserEvents(ctx context.Context, user *models.User) ([]models.Event, error) {
+func (s Service) getUserEvents(ctx context.Context, user *models.User, pageToken string, size int) (models.EventsResponse, error) {
 	var result []models.Event
 	var tok oauth2.Token
 	err := json.Unmarshal([]byte(*user.Token), &tok)
 	if err != nil {
-		return nil, err
+		return models.EventsResponse{}, err
 	}
 
-	events, err := s.c.GetEventsForUser(ctx, tok)
+	events, err := s.c.GetEventsForUser(ctx, tok, pageToken, size)
 
 	if len(events.Items) != 0 {
 		for _, item := range events.Items {
@@ -75,10 +75,20 @@ func (s Service) getUserEvents(ctx context.Context, user *models.User) ([]models
 			if date == "" {
 				date = item.Start.Date
 			}
-			event := &models.Event{Title: item.Summary}
+			var attendees []string
+			for _, attendee := range item.Attendees {
+				attendees = append(attendees, attendee.Email)
+			}
+			event := &models.Event{
+				Title:     item.Summary,
+				Start:     item.Start.DateTime,
+				End:       item.End.DateTime,
+				Organizer: item.Organizer.Email,
+				Attendees: attendees,
+			}
 			result = append(result, *event)
 		}
 	}
 
-	return result, nil
+	return models.EventsResponse{Items: result, NextPageToken: events.NextPageToken}, nil
 }

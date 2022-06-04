@@ -9,7 +9,7 @@ import (
 )
 
 type ICalendar interface {
-	GetEventsForUser(ctx context.Context, tok oauth2.Token) (*calendar.Events, error)
+	GetEventsForUser(ctx context.Context, tok oauth2.Token, nextPageToken string, size int) (*calendar.Events, error)
 }
 
 type Calendar struct {
@@ -20,7 +20,7 @@ func NewCalendar(c *oauth2.Config) *Calendar {
 	return &Calendar{config: c}
 }
 
-func (c Calendar) GetEventsForUser(ctx context.Context, tok oauth2.Token) (*calendar.Events, error) {
+func (c Calendar) GetEventsForUser(ctx context.Context, tok oauth2.Token, pageToken string, size int) (*calendar.Events, error) {
 	client := c.config.Client(context.Background(), &tok)
 
 	srv, err := calendar.NewService(ctx, option.WithHTTPClient(client))
@@ -34,7 +34,8 @@ func (c Calendar) GetEventsForUser(ctx context.Context, tok oauth2.Token) (*cale
 		ShowDeleted(false).
 		SingleEvents(true).
 		TimeMin(t).
-		MaxResults(10).
+		MaxResults(int64(size)).
+		PageToken(pageToken).
 		OrderBy("startTime").
 		Do()
 	if err != nil {
