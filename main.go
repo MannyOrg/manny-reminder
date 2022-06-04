@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"log"
 	"manny-reminder/pkg/auth"
+	calendar2 "manny-reminder/pkg/calendar"
 	"manny-reminder/pkg/events"
 	"net/http"
 	"os"
@@ -39,8 +40,9 @@ func main() {
 	as := auth.NewService(l, ar, config)
 	ah := auth.NewHandler(as)
 
+	cl := calendar2.NewCalendar(config)
 	er := events.NewRepository(l, db)
-	es := events.NewEvents(er, l, config, as)
+	es := events.NewEvents(er, l, as, cl)
 	eh := events.NewHandler(es)
 
 	sm := mux.NewRouter()

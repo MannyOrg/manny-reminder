@@ -4,12 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"golang.org/x/oauth2"
-	"google.golang.org/api/calendar/v3"
-	"google.golang.org/api/option"
+	calendar2 "manny-reminder/pkg/calendar"
+
 	"log"
 	"manny-reminder/pkg/auth"
 	"manny-reminder/pkg/models"
-	"time"
 )
 
 type IService interface {
@@ -18,14 +17,14 @@ type IService interface {
 }
 
 type Service struct {
-	l      *log.Logger
-	r      IRepository
-	config *oauth2.Config
-	as     auth.IService
+	l  *log.Logger
+	r  IRepository
+	as auth.IService
+	c  calendar2.ICalendar
 }
 
-func NewEvents(r *Repository, l *log.Logger, config *oauth2.Config, as auth.IService) *Service {
-	return &Service{l, r, config, as}
+func NewEvents(r *Repository, l *log.Logger, as auth.IService, c calendar2.ICalendar) *Service {
+	return &Service{l: l, r: r, as: as, c: c}
 }
 
 func (s Service) GetUsersEvents() (map[string][]models.Event, error) {
@@ -68,25 +67,7 @@ func (s Service) getUserEvents(ctx context.Context, user *models.User) ([]models
 		return nil, err
 	}
 
-	client := s.config.Client(context.Background(), &tok)
-
-	srv, err := calendar.NewService(ctx, option.WithHTTPClient(client))
-	if err != nil {
-		return nil, err
-	}
-
-	t := time.Now().Format(time.RFC3339)
-	events, err := srv.Events.
-		List("primary").
-		ShowDeleted(false).
-		SingleEvents(true).
-		TimeMin(t).
-		MaxResults(10).
-		OrderBy("startTime").
-		Do()
-	if err != nil {
-		return nil, err
-	}
+	events, err := s.c.GetEventsForUser(ctx, tok)
 
 	if len(events.Items) != 0 {
 		for _, item := range events.Items {

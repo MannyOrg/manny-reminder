@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"encoding/json"
 	"manny-reminder/pkg/utils"
 	"net/http"
 )
@@ -23,10 +22,7 @@ func (h *Handler) GetUsers(w http.ResponseWriter, _ *http.Request) {
 	if err != nil {
 		utils.SendHttpError(w, err)
 	}
-	err = json.NewEncoder(w).Encode(users)
-	if err != nil {
-		utils.SendHttpError(w, err)
-	}
+	utils.SendJson(w, users)
 }
 
 func (h *Handler) AddUser(w http.ResponseWriter, r *http.Request) {

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -18,5 +19,12 @@ func sendHttpError(w io.Writer, message string) {
 	if err != nil {
 		log.Default().Print(err.Error())
 		return
+	}
+}
+
+func SendJson(w io.Writer, body interface{}) {
+	err := json.NewEncoder(w).Encode(body)
+	if err != nil {
+		SendHttpError(w, err)
 	}
 }

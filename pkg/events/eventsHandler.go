@@ -1,7 +1,6 @@
 package events
 
 import (
-	"encoding/json"
 	"github.com/gorilla/mux"
 	"manny-reminder/pkg/models"
 	"manny-reminder/pkg/utils"
@@ -28,10 +27,7 @@ func (h Handler) GetUsersEvents(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 
-	err = json.NewEncoder(w).Encode(events)
-	if err != nil {
-		utils.SendHttpError(w, err)
-	}
+	utils.SendJson(w, events)
 }
 
 func (h Handler) GetUserEvents(w http.ResponseWriter, r *http.Request) {
@@ -47,9 +43,5 @@ func (h Handler) GetUserEvents(w http.ResponseWriter, r *http.Request) {
 		utils.SendHttpError(w, err)
 		return
 	}
-
-	err = json.NewEncoder(w).Encode(events)
-	if err != nil {
-		utils.SendHttpError(w, err)
-	}
+	utils.SendJson(w, events)
 }
