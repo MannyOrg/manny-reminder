@@ -22,12 +22,12 @@ func NewHandler(es IService) *Handler {
 type GetUsersEventsResponse map[string][]models.Event
 
 func (h Handler) GetUsersEvents(w http.ResponseWriter, r *http.Request) {
-	pt, s, err := h.getPagingData(r)
+	_, s, err := h.getPagingData(r)
 	if err != nil {
 		utils.SendHttpError(w, err)
 	}
 
-	events, err := h.es.GetUsersEvents(pt, s)
+	events, err := h.es.GetUsersEvents("", s)
 	if err != nil {
 		utils.SendHttpError(w, err)
 		return

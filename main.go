@@ -41,7 +41,7 @@ func main() {
 
 	cl := calendar2.NewCalendar(config)
 	er := events.NewRepository(l, db)
-	es := events.NewEvents(er, l, as, cl)
+	es := events.NewService(er, l, as, cl)
 	eh := events.NewHandler(es)
 
 	sm := mux.NewRouter()

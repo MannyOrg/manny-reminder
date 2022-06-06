@@ -16,7 +16,7 @@ type IService interface {
 	GetUsers() ([]models.User, error)
 	GetTokenFromWeb() string
 	GetClient(user string) *http.Client
-	GetUser(id string) (models.User, error)
+	GetUser(id string) (*models.User, error)
 }
 
 type Service struct {
@@ -33,7 +33,7 @@ func (s Service) GetUsers() ([]models.User, error) {
 	return s.r.GetUsers()
 }
 
-func (s Service) GetUser(userId string) (models.User, error) {
+func (s Service) GetUser(userId string) (*models.User, error) {
 	return s.r.GetUser(userId)
 }
 

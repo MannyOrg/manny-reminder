@@ -23,7 +23,7 @@ type Service struct {
 	c  calendar2.ICalendar
 }
 
-func NewEvents(r *Repository, l *log.Logger, as auth.IService, c calendar2.ICalendar) *Service {
+func NewService(r IRepository, l *log.Logger, as auth.IService, c calendar2.ICalendar) *Service {
 	return &Service{l: l, r: r, as: as, c: c}
 }
 
@@ -32,6 +32,9 @@ func (s Service) GetUsersEvents(pageToken string, size int) (map[string]models.E
 	users, err := s.as.GetUsers()
 	if err != nil {
 		return nil, err
+	}
+	if len(users) == 0 {
+		return response, nil
 	}
 	ctx := context.Background()
 	for _, user := range users {
@@ -50,8 +53,11 @@ func (s Service) GetUserEvents(userId string, pageToken string, size int) (model
 	if err != nil {
 		return models.EventsResponse{}, err
 	}
+	if user == nil {
+		return models.EventsResponse{}, nil
+	}
 	ctx := context.Background()
-	events, err := s.getUserEvents(ctx, &user, pageToken, size)
+	events, err := s.getUserEvents(ctx, user, pageToken, size)
 	if err != nil {
 		return models.EventsResponse{}, err
 	}
@@ -69,25 +75,27 @@ func (s Service) getUserEvents(ctx context.Context, user *models.User, pageToken
 
 	events, err := s.c.GetEventsForUser(ctx, tok, pageToken, size)
 
-	if len(events.Items) != 0 {
-		for _, item := range events.Items {
-			date := item.Start.DateTime
-			if date == "" {
-				date = item.Start.Date
-			}
-			var attendees []string
-			for _, attendee := range item.Attendees {
-				attendees = append(attendees, attendee.Email)
-			}
-			event := &models.Event{
-				Title:     item.Summary,
-				Start:     item.Start.DateTime,
-				End:       item.End.DateTime,
-				Organizer: item.Organizer.Email,
-				Attendees: attendees,
-			}
-			result = append(result, *event)
+	if events == nil || len(events.Items) == 0 {
+		return models.EventsResponse{Items: result, NextPageToken: ""}, nil
+	}
+
+	for _, item := range events.Items {
+		date := item.Start.DateTime
+		if date == "" {
+			date = item.Start.Date
 		}
+		var attendees []string
+		for _, attendee := range item.Attendees {
+			attendees = append(attendees, attendee.Email)
+		}
+		event := &models.Event{
+			Title:     item.Summary,
+			Start:     item.Start.DateTime,
+			End:       item.End.DateTime,
+			Organizer: item.Organizer.Email,
+			Attendees: attendees,
+		}
+		result = append(result, *event)
 	}
 
 	return models.EventsResponse{Items: result, NextPageToken: events.NextPageToken}, nil

@@ -9,7 +9,7 @@ import (
 type IRepository interface {
 	GetUsers() ([]models.User, error)
 	AddUser(authCode string, token string) error
-	GetUser(id string) (models.User, error)
+	GetUser(id string) (*models.User, error)
 }
 
 type Repository struct {
@@ -44,15 +44,18 @@ func (r Repository) GetUsers() ([]models.User, error) {
 	return users, nil
 }
 
-func (r Repository) GetUser(userId string) (models.User, error) {
+func (r Repository) GetUser(userId string) (*models.User, error) {
 	var user models.User
 	row := r.db.QueryRow("SELECT id, email, token FROM users WHERE id = $1 LIMIT 1", userId)
 	err := row.Scan(&user.Id, &user.Email, &user.Token)
 	if err != nil {
-		return models.User{}, err
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
 	}
 
-	return user, nil
+	return &user, nil
 }
 
 func (r Repository) AddUser(id, token string) error {
