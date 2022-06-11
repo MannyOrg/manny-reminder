@@ -3,7 +3,7 @@ package auth
 import (
 	"database/sql"
 	"log"
-	"manny-reminder/pkg/models"
+	"manny-reminder/internal/models"
 )
 
 type IRepository interface {

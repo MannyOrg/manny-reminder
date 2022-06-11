@@ -9,7 +9,7 @@ import (
 	"golang.org/x/oauth2"
 	"google.golang.org/api/calendar/v3"
 	"log"
-	"manny-reminder/pkg/models"
+	"manny-reminder/internal/models"
 	"net/http"
 	"testing"
 )

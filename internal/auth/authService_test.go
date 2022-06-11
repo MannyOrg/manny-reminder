@@ -4,7 +4,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/oauth2"
 	"log"
-	"manny-reminder/pkg/models"
+	"manny-reminder/internal/models"
 	"testing"
 )
 

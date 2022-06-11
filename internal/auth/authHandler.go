@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"manny-reminder/pkg/utils"
+	"manny-reminder/internal/utils"
 	"net/http"
 )
 

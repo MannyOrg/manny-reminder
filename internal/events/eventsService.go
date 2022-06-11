@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"golang.org/x/oauth2"
-	calendar2 "manny-reminder/pkg/calendar"
+	calendar2 "manny-reminder/internal/calendar"
 
 	"log"
-	"manny-reminder/pkg/auth"
-	"manny-reminder/pkg/models"
+	"manny-reminder/internal/auth"
+	"manny-reminder/internal/models"
 )
 
 type IService interface {
@@ -20,10 +20,10 @@ type Service struct {
 	l  *log.Logger
 	r  IRepository
 	as auth.IService
-	c  calendar2.ICalendar
+	c  calendar2.Calendar
 }
 
-func NewService(r IRepository, l *log.Logger, as auth.IService, c calendar2.ICalendar) *Service {
+func NewService(r IRepository, l *log.Logger, as auth.IService, c calendar2.Calendar) *Service {
 	return &Service{l: l, r: r, as: as, c: c}
 }
 
@@ -73,30 +73,11 @@ func (s Service) getUserEvents(ctx context.Context, user *models.User, pageToken
 		return models.EventsResponse{}, err
 	}
 
-	events, err := s.c.GetEventsForUser(ctx, tok, pageToken, size)
+	events, npt, err := s.c.GetEventsForUser(ctx, tok, pageToken, size)
 
-	if events == nil || len(events.Items) == 0 {
+	if events == nil || len(*events) == 0 {
 		return models.EventsResponse{Items: result, NextPageToken: ""}, nil
 	}
 
-	for _, item := range events.Items {
-		date := item.Start.DateTime
-		if date == "" {
-			date = item.Start.Date
-		}
-		var attendees []string
-		for _, attendee := range item.Attendees {
-			attendees = append(attendees, attendee.Email)
-		}
-		event := &models.Event{
-			Title:     item.Summary,
-			Start:     item.Start.DateTime,
-			End:       item.End.DateTime,
-			Organizer: item.Organizer.Email,
-			Attendees: attendees,
-		}
-		result = append(result, *event)
-	}
-
-	return models.EventsResponse{Items: result, NextPageToken: events.NextPageToken}, nil
+	return models.EventsResponse{Items: result, NextPageToken: npt}, nil
 }

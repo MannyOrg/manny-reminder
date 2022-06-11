@@ -2,8 +2,8 @@ package events
 
 import (
 	"github.com/gorilla/mux"
-	"manny-reminder/pkg/models"
-	"manny-reminder/pkg/utils"
+	"manny-reminder/internal/models"
+	"manny-reminder/internal/utils"
 	"net/http"
 	"strconv"
 )

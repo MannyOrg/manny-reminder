@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 	"log"
-	"manny-reminder/pkg/models"
+	"manny-reminder/internal/models"
 	"net/http"
 	"os"
 )

@@ -8,7 +8,9 @@ type Event struct {
 	Attendees []string `json:"attendees"`
 }
 
+type Events []Event
+
 type EventsResponse struct {
-	Items         []Event `json:"items"`
-	NextPageToken string  `json:"nextPageToken"`
+	Items         Events `json:"items"`
+	NextPageToken string `json:"nextPageToken"`
 }
