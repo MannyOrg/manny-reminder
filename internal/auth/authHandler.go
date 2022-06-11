@@ -5,19 +5,19 @@ import (
 	"net/http"
 )
 
-type IHandler interface {
+type Handler interface {
 	GetUsers(w http.ResponseWriter, r *http.Request)
 }
 
-type Handler struct {
-	as IService
+type HandlerImpl struct {
+	as Service
 }
 
-func NewHandler(as IService) *Handler {
-	return &Handler{as: as}
+func NewHandler(as Service) *HandlerImpl {
+	return &HandlerImpl{as: as}
 }
 
-func (h *Handler) GetUsers(w http.ResponseWriter, _ *http.Request) {
+func (h *HandlerImpl) GetUsers(w http.ResponseWriter, _ *http.Request) {
 	users, err := h.as.GetUsers()
 	if err != nil {
 		utils.SendHttpError(w, err)
@@ -25,13 +25,13 @@ func (h *Handler) GetUsers(w http.ResponseWriter, _ *http.Request) {
 	utils.SendJson(w, users)
 }
 
-func (h *Handler) AddUser(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerImpl) AddUser(w http.ResponseWriter, r *http.Request) {
 	authUrl := h.as.GetTokenFromWeb()
 
 	http.Redirect(w, r, authUrl, http.StatusSeeOther)
 }
 
-func (h *Handler) SaveUser(w http.ResponseWriter, r *http.Request) {
+func (h *HandlerImpl) SaveUser(w http.ResponseWriter, r *http.Request) {
 	authCode := r.URL.Query().Get("code")
 	err := h.as.SaveUser(authCode)
 	if err != nil {

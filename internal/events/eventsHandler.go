@@ -8,20 +8,20 @@ import (
 	"strconv"
 )
 
-type IHandler interface {
+type Handler interface {
 }
 
-type Handler struct {
-	es IService
+type HandlerImpl struct {
+	es Service
 }
 
-func NewHandler(es IService) *Handler {
-	return &Handler{es: es}
+func NewHandler(es Service) *HandlerImpl {
+	return &HandlerImpl{es: es}
 }
 
 type GetUsersEventsResponse map[string][]models.Event
 
-func (h Handler) GetUsersEvents(w http.ResponseWriter, r *http.Request) {
+func (h HandlerImpl) GetUsersEvents(w http.ResponseWriter, r *http.Request) {
 	_, s, err := h.getPagingData(r)
 	if err != nil {
 		utils.SendHttpError(w, err)
@@ -36,7 +36,7 @@ func (h Handler) GetUsersEvents(w http.ResponseWriter, r *http.Request) {
 	utils.SendJson(w, events)
 }
 
-func (h Handler) GetUserEvents(w http.ResponseWriter, r *http.Request) {
+func (h HandlerImpl) GetUserEvents(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	userId := params["userId"]
 	if userId == "" {
@@ -56,7 +56,7 @@ func (h Handler) GetUserEvents(w http.ResponseWriter, r *http.Request) {
 	utils.SendJson(w, events)
 }
 
-func (h Handler) getPagingData(r *http.Request) (string, int, error) {
+func (h HandlerImpl) getPagingData(r *http.Request) (string, int, error) {
 	size := 10
 	var err error
 

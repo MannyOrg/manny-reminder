@@ -5,14 +5,14 @@ import (
 	"log"
 )
 
-type IRepository interface {
+type Repository interface {
 }
 
-type Repository struct {
+type RepositoryImpl struct {
 	l  *log.Logger
 	db *sql.DB
 }
 
-func NewRepository(l *log.Logger, db *sql.DB) *Repository {
-	return &Repository{l, db}
+func NewRepository(l *log.Logger, db *sql.DB) *RepositoryImpl {
+	return &RepositoryImpl{l, db}
 }

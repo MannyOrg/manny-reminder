@@ -3,53 +3,16 @@ package events
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/calendar/v3"
 	"log"
 	"manny-reminder/internal/models"
-	"net/http"
 	"testing"
 )
 
 const test_error_msg = "test error occured"
-
-type EventsRepositoryMock struct {
-}
-
-type AuthServiceMock struct {
-	Users      []models.User
-	User       *models.User
-	ThrowError bool
-}
-
-func (a AuthServiceMock) SaveUser(authCode string) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (a AuthServiceMock) GetUsers() ([]models.User, error) {
-	if a.ThrowError {
-		return nil, errors.New(test_error_msg)
-	}
-	return a.Users, nil
-}
-
-func (a AuthServiceMock) GetTokenFromWeb() string {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (a AuthServiceMock) GetClient(userId string) *http.Client {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (a AuthServiceMock) GetUser(userId string) (*models.User, error) {
-	return a.User, nil
-}
 
 type CalendarMock struct {
 	Events map[string]*calendar.Events

@@ -11,7 +11,7 @@ import (
 	"os"
 )
 
-type IService interface {
+type Service interface {
 	SaveUser(authCode string) error
 	GetUsers() ([]models.User, error)
 	GetTokenFromWeb() string
@@ -19,26 +19,26 @@ type IService interface {
 	GetUser(id string) (*models.User, error)
 }
 
-type Service struct {
+type ServiceImpl struct {
 	l      *log.Logger
-	r      IRepository
+	r      Repository
 	config *oauth2.Config
 }
 
-func NewService(l *log.Logger, r IRepository, config *oauth2.Config) *Service {
-	return &Service{l, r, config}
+func NewService(l *log.Logger, r Repository, config *oauth2.Config) *ServiceImpl {
+	return &ServiceImpl{l, r, config}
 }
 
-func (s Service) GetUsers() ([]models.User, error) {
+func (s ServiceImpl) GetUsers() ([]models.User, error) {
 	return s.r.GetUsers()
 }
 
-func (s Service) GetUser(userId string) (*models.User, error) {
+func (s ServiceImpl) GetUser(userId string) (*models.User, error) {
 	return s.r.GetUser(userId)
 }
 
 // GetClient Retrieve a token, saves the token, then returns the generated client.
-func (s *Service) GetClient(user string) *http.Client {
+func (s *ServiceImpl) GetClient(user string) *http.Client {
 	// The file credentials.json stores the user's access and refresh tokens, and is
 	// created automatically when the authorization flow completes for the first
 	// time.
@@ -50,13 +50,13 @@ func (s *Service) GetClient(user string) *http.Client {
 }
 
 // GetTokenFromWeb Request a token from the web, then returns the retrieved token.
-func (s *Service) GetTokenFromWeb() string {
+func (s *ServiceImpl) GetTokenFromWeb() string {
 	authURL := s.config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
 	return authURL
 }
 
 // Retrieves a token from a local file.
-func (s *Service) tokenFromFile(file string) (*oauth2.Token, error) {
+func (s *ServiceImpl) tokenFromFile(file string) (*oauth2.Token, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func (s *Service) tokenFromFile(file string) (*oauth2.Token, error) {
 	return tok, err
 }
 
-func (s Service) SaveUser(authCode string) error {
+func (s ServiceImpl) SaveUser(authCode string) error {
 	tok, err := s.config.Exchange(context.TODO(), authCode)
 	if err != nil {
 		log.Fatalf("Unable to read authorization code: %v", err)

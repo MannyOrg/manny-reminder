@@ -74,7 +74,7 @@ func TestGetUsers_MultipleUsers(t *testing.T) {
 	assert.Exactly(t, 4, len(users))
 }
 
-func getService() (*Service, *RepositoryMock) {
+func getService() (*ServiceImpl, *RepositoryMock) {
 	l := log.Default()
 	r := NewRepositoryMock()
 	c := &oauth2.Config{}

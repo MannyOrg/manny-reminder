@@ -6,22 +6,22 @@ import (
 	"manny-reminder/internal/models"
 )
 
-type IRepository interface {
+type Repository interface {
 	GetUsers() ([]models.User, error)
 	AddUser(authCode string, token string) error
 	GetUser(id string) (*models.User, error)
 }
 
-type Repository struct {
+type RepositoryImpl struct {
 	l  *log.Logger
 	db *sql.DB
 }
 
-func NewRepository(l *log.Logger, db *sql.DB) *Repository {
-	return &Repository{l, db}
+func NewRepository(l *log.Logger, db *sql.DB) *RepositoryImpl {
+	return &RepositoryImpl{l, db}
 }
 
-func (r Repository) GetUsers() ([]models.User, error) {
+func (r RepositoryImpl) GetUsers() ([]models.User, error) {
 	var res models.User
 	var users []models.User
 	rows, err := r.db.Query("SELECT id, email, token FROM users")
@@ -44,7 +44,7 @@ func (r Repository) GetUsers() ([]models.User, error) {
 	return users, nil
 }
 
-func (r Repository) GetUser(userId string) (*models.User, error) {
+func (r RepositoryImpl) GetUser(userId string) (*models.User, error) {
 	var user models.User
 	row := r.db.QueryRow("SELECT id, email, token FROM users WHERE id = $1 LIMIT 1", userId)
 	err := row.Scan(&user.Id, &user.Email, &user.Token)
@@ -58,7 +58,7 @@ func (r Repository) GetUser(userId string) (*models.User, error) {
 	return &user, nil
 }
 
-func (r Repository) AddUser(id, token string) error {
+func (r RepositoryImpl) AddUser(id, token string) error {
 	_, err := r.db.Exec("INSERT INTO users (id, token) VALUES ($1, $2)", id, token)
 	if err != nil {
 		return err

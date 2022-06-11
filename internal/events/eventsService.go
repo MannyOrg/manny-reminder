@@ -11,23 +11,23 @@ import (
 	"manny-reminder/internal/models"
 )
 
-type IService interface {
+type Service interface {
 	GetUsersEvents(pageToken string, size int) (map[string]models.EventsResponse, error)
 	GetUserEvents(userId string, pageToken string, size int) (models.EventsResponse, error)
 }
 
-type Service struct {
+type ServiceImpl struct {
 	l  *log.Logger
-	r  IRepository
-	as auth.IService
+	r  Repository
+	as auth.Service
 	c  calendar2.Calendar
 }
 
-func NewService(r IRepository, l *log.Logger, as auth.IService, c calendar2.Calendar) *Service {
-	return &Service{l: l, r: r, as: as, c: c}
+func NewService(r Repository, l *log.Logger, as auth.Service, c calendar2.Calendar) *ServiceImpl {
+	return &ServiceImpl{l: l, r: r, as: as, c: c}
 }
 
-func (s Service) GetUsersEvents(pageToken string, size int) (map[string]models.EventsResponse, error) {
+func (s ServiceImpl) GetUsersEvents(pageToken string, size int) (map[string]models.EventsResponse, error) {
 	response := make(map[string]models.EventsResponse)
 	users, err := s.as.GetUsers()
 	if err != nil {
@@ -48,7 +48,7 @@ func (s Service) GetUsersEvents(pageToken string, size int) (map[string]models.E
 	return response, nil
 }
 
-func (s Service) GetUserEvents(userId string, pageToken string, size int) (models.EventsResponse, error) {
+func (s ServiceImpl) GetUserEvents(userId string, pageToken string, size int) (models.EventsResponse, error) {
 	user, err := s.as.GetUser(userId)
 	if err != nil {
 		return models.EventsResponse{}, err
@@ -65,7 +65,7 @@ func (s Service) GetUserEvents(userId string, pageToken string, size int) (model
 	return events, nil
 }
 
-func (s Service) getUserEvents(ctx context.Context, user *models.User, pageToken string, size int) (models.EventsResponse, error) {
+func (s ServiceImpl) getUserEvents(ctx context.Context, user *models.User, pageToken string, size int) (models.EventsResponse, error) {
 	var result []models.Event
 	var tok oauth2.Token
 	err := json.Unmarshal([]byte(*user.Token), &tok)
