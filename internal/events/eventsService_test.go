@@ -3,12 +3,17 @@ package events
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/calendar/v3"
 	"log"
 	"manny-reminder/internal/models"
+	"manny-reminder/mocks"
+	"strconv"
 	"testing"
 )
 
@@ -27,9 +32,9 @@ func (c CalendarMock) GetEventsForUser(ctx context.Context, token oauth2.Token, 
 }
 
 func TestService_GetUsersEvents_WhenNoUsers_Empty(t *testing.T) {
-	er := EventsRepositoryMock{}
-	as := AuthServiceMock{}
-	c := CalendarMock{}
+	er := mocks.NewEventsRepository(t)
+	as := mocks.NewAuthService(t)
+	c := mocks.NewCalendar(t)
 	es := NewService(er, log.Default(), as, c)
 
 	events, err := es.GetUsersEvents("", 10)
@@ -39,11 +44,13 @@ func TestService_GetUsersEvents_WhenNoUsers_Empty(t *testing.T) {
 }
 
 func TestService_GetUsersEvents_WhenAsErr_Err(t *testing.T) {
-	er := EventsRepositoryMock{}
-	as := AuthServiceMock{}
-	c := CalendarMock{}
+	er := mocks.NewEventsRepository(t)
+	as := mocks.NewAuthService(t)
+	c := mocks.NewCalendar(t)
 
-	as.ThrowError = true
+	err := errors.New(test_error_msg)
+	var users []models.User
+	mockAuthServiceGetUsers(as, users, err)
 
 	es := NewService(er, log.Default(), as, c)
 
@@ -55,19 +62,21 @@ func TestService_GetUsersEvents_WhenAsErr_Err(t *testing.T) {
 }
 
 func TestService_GetUsersEvents_WhenUsersAndNoEvents(t *testing.T) {
-	er := EventsRepositoryMock{}
-	as := AuthServiceMock{}
-	c := CalendarMock{}
+	er := mocks.NewEventsRepository(t)
+	as := mocks.NewAuthService(t)
+	c := mocks.NewCalendar(t)
 
 	userToken := "{\"access_token\":\"test\",\"token_type\":\"Bearer\",\"refresh_token\":\"test\",\"expiry\":\"2022-06-04T17:36:36.65039945+03:00\"}"
 	uuid1, _ := uuid.NewUUID()
 	uuid2, _ := uuid.NewUUID()
-	as.Users = []models.User{
+
+	users := []models.User{
 		{Id: &uuid1, Token: &userToken},
 		{Id: &uuid2, Token: &userToken},
 	}
-
-	c.Events = make(map[string]*calendar.Events)
+	mockedEvents := make(map[string]models.Events)
+	mockAuthServiceGetUsers(as, users, nil)
+	mockCalendar(c, mockedEvents, nil)
 
 	es := NewService(er, log.Default(), as, c)
 
@@ -83,9 +92,9 @@ func TestService_GetUsersEvents_WhenUsersAndNoEvents(t *testing.T) {
 }
 
 func TestService_GetUsersEvents_WhenUsersAndEvents(t *testing.T) {
-	er := EventsRepositoryMock{}
-	as := AuthServiceMock{}
-	c := CalendarMock{}
+	er := mocks.NewEventsRepository(t)
+	as := mocks.NewAuthService(t)
+	c := mocks.NewCalendar(t)
 
 	userToken1 := "{\"access_token\":\"test1\",\"expiry\":\"2022-06-04T17:36:36.65039945+03:00\"}"
 	userToken2 := "{\"access_token\":\"test2\",\"expiry\":\"2022-06-04T17:36:36.65039945+03:00\"}"
@@ -93,33 +102,22 @@ func TestService_GetUsersEvents_WhenUsersAndEvents(t *testing.T) {
 	uuid1 := uuid.New()
 	uuid2 := uuid.New()
 	uuid3 := uuid.New()
-	as.Users = []models.User{
+	users := []models.User{
 		{Id: &uuid1, Token: &userToken1},
 		{Id: &uuid2, Token: &userToken2},
 		{Id: &uuid3, Token: &userToken3},
 	}
+	mockAuthServiceGetUsers(as, users, nil)
 
-	c.Events = make(map[string]*calendar.Events)
-	user1Events := []*calendar.Event{
-		{Summary: "Meeting1", Start: &calendar.EventDateTime{}, End: &calendar.EventDateTime{}, Organizer: &calendar.EventOrganizer{Email: "test@test.com"}},
-		{Summary: "Meeting2", Start: &calendar.EventDateTime{}, End: &calendar.EventDateTime{}, Organizer: &calendar.EventOrganizer{Email: "test@test.com"}},
-		{Summary: "Meeting3", Start: &calendar.EventDateTime{}, End: &calendar.EventDateTime{}, Organizer: &calendar.EventOrganizer{Email: "test@test.com"}},
-	}
-	c.Events[userToken1] = &calendar.Events{
-		Items: user1Events,
-	}
-	user2Events := []*calendar.Event{
-		{Summary: "Meeting4", Start: &calendar.EventDateTime{}, End: &calendar.EventDateTime{}, Organizer: &calendar.EventOrganizer{Email: "test@test.com"}, Attendees: []*calendar.EventAttendee{&calendar.EventAttendee{Email: "test@email.com"}}},
-		{Summary: "Meeting5", Start: &calendar.EventDateTime{}, End: &calendar.EventDateTime{}, Organizer: &calendar.EventOrganizer{Email: "test@test.com"}},
-	}
-	c.Events[userToken2] = &calendar.Events{
-		Items: user2Events,
-	}
-	user3Events := []*calendar.Event{}
-	c.Events[userToken3] = &calendar.Events{
-		Items: user3Events,
-	}
+	mockedEvents := make(map[string]models.Events)
+	user1Events := generateEvents("1", 3)
+	mockedEvents[userToken1] = user1Events
+	user2Events := generateEvents("2", 2)
+	mockedEvents[userToken2] = user2Events
+	user3Events := generateEvents("3", 0)
+	mockedEvents[userToken3] = user3Events
 
+	mockCalendar(c, mockedEvents, nil)
 	es := NewService(er, log.Default(), as, c)
 
 	events, err := es.GetUsersEvents("", 10)
@@ -141,19 +139,23 @@ func TestService_GetUsersEvents_WhenUsersAndEvents(t *testing.T) {
 }
 
 func TestService_GetUsersEvents_UserInvalidToken(t *testing.T) {
-	er := EventsRepositoryMock{}
-	as := AuthServiceMock{}
-	c := CalendarMock{}
+	er := mocks.NewEventsRepository(t)
+	as := mocks.NewAuthService(t)
+	c := mocks.NewCalendar(t)
 
 	userToken := "invalid-token-obs"
 	uuid1, _ := uuid.NewUUID()
 	uuid2, _ := uuid.NewUUID()
-	as.Users = []models.User{
+	users := []models.User{
 		{Id: &uuid1, Token: &userToken},
 		{Id: &uuid2, Token: &userToken},
 	}
+	mockedEvents := make(map[string]models.Events)
+	user1Events := generateEvents("1", 0)
+	mockedEvents[userToken] = user1Events
 
-	c.Events = make(map[string]*calendar.Events)
+	mockCalendar(c, mockedEvents, nil)
+	mockAuthServiceGetUsers(as, users, nil)
 
 	es := NewService(er, log.Default(), as, c)
 
@@ -164,11 +166,12 @@ func TestService_GetUsersEvents_UserInvalidToken(t *testing.T) {
 }
 
 func TestService_GetUserEvents_UserDoesNotExist(t *testing.T) {
-	er := EventsRepositoryMock{}
-	as := AuthServiceMock{}
-	c := CalendarMock{}
+	er := mocks.NewEventsRepository(t)
+	as := mocks.NewAuthService(t)
+	c := mocks.NewCalendar(t)
 
-	as.User = nil
+	var users models.Users
+	mockAuthServiceGetUsers(as, users, nil)
 
 	es := NewService(er, log.Default(), as, c)
 
@@ -179,14 +182,15 @@ func TestService_GetUserEvents_UserDoesNotExist(t *testing.T) {
 }
 
 func TestService_GetUserEvents_NoUserEvents(t *testing.T) {
-	er := EventsRepositoryMock{}
-	as := AuthServiceMock{}
-	c := CalendarMock{}
+	er := mocks.NewEventsRepository(t)
+	as := mocks.NewAuthService(t)
+	c := mocks.NewCalendar(t)
 
 	userToken := "{\"access_token\":\"test\",\"token_type\":\"Bearer\",\"refresh_token\":\"test\",\"expiry\":\"2022-06-04T17:36:36.65039945+03:00\"}"
 	uuid1, _ := uuid.NewUUID()
 
-	as.User = &models.User{Id: &uuid1, Token: &userToken}
+	users := []models.User{{Id: &uuid1, Token: &userToken}}
+	mockAuthServiceGetUsers(as, users, nil)
 
 	es := NewService(er, log.Default(), as, c)
 
@@ -197,24 +201,19 @@ func TestService_GetUserEvents_NoUserEvents(t *testing.T) {
 }
 
 func TestService_GetUserEvents_UserEvents(t *testing.T) {
-	er := EventsRepositoryMock{}
-	as := AuthServiceMock{}
-	c := CalendarMock{}
+	er := mocks.NewEventsRepository(t)
+	as := mocks.NewAuthService(t)
+	c := mocks.NewCalendar(t)
 
 	userToken := "{\"access_token\":\"test\",\"token_type\":\"Bearer\",\"refresh_token\":\"test\",\"expiry\":\"2022-06-04T17:36:36.65039945+03:00\"}"
 	uuid1, _ := uuid.NewUUID()
 
-	as.User = &models.User{Id: &uuid1, Token: &userToken}
+	users := []models.User{{Id: &uuid1, Token: &userToken}}
+	mockAuthServiceGetUsers(as, users, nil)
 
-	c.Events = make(map[string]*calendar.Events)
-	user1Events := []*calendar.Event{
-		{Summary: "Meeting1", Start: &calendar.EventDateTime{}, End: &calendar.EventDateTime{}, Organizer: &calendar.EventOrganizer{Email: "test@test.com"}},
-		{Summary: "Meeting2", Start: &calendar.EventDateTime{}, End: &calendar.EventDateTime{}, Organizer: &calendar.EventOrganizer{Email: "test@test.com"}},
-		{Summary: "Meeting3", Start: &calendar.EventDateTime{}, End: &calendar.EventDateTime{}, Organizer: &calendar.EventOrganizer{Email: "test@test.com"}},
-	}
-	c.Events[userToken] = &calendar.Events{
-		Items: user1Events,
-	}
+	var mockedEvents = make(map[string]*models.Events)
+	user1Events := generateEvents("1", 3)
+	mockedEvents[userToken] = &user1Events
 
 	es := NewService(er, log.Default(), as, c)
 
@@ -223,4 +222,42 @@ func TestService_GetUserEvents_UserEvents(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotEmpty(t, events)
 	assert.Exactly(t, 3, len(events.Items))
+}
+
+func mockAuthServiceGetUsers(as *mocks.AuthService, users []models.User, err error) {
+	as.On("GetUsers").Return(users, err)
+}
+
+func mockCalendar(c *mocks.Calendar, events map[string]models.Events, err error) {
+	c.On("GetEventsForUser",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything).Return(
+		func(_ context.Context, tok oauth2.Token, _ string, _ int) *models.Events {
+			token, err := json.Marshal(tok)
+			if err != nil {
+				return nil
+			}
+			event := events[string(token)]
+			return &event
+		},
+		func(_ context.Context, _ oauth2.Token, _ string, _ int) string {
+			return ""
+		},
+		func(_ context.Context, _ oauth2.Token, _ string, _ int) error {
+			return err
+		})
+}
+
+func generateEvents(prefix string, count int) models.Events {
+	var events models.Events
+	for i := 0; i < count; i++ {
+		events = append(events, models.Event{
+			Title:     fmt.Sprintf("Meeting %s%s", prefix, strconv.Itoa(i)),
+			Organizer: fmt.Sprintf("Organizer %s%s", prefix, strconv.Itoa(i)),
+		})
+	}
+
+	return events
 }

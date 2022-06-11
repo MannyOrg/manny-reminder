@@ -6,7 +6,7 @@ import (
 	"manny-reminder/internal/models"
 )
 
-type Repository interface {
+type AuthRepository interface {
 	GetUsers() ([]models.User, error)
 	AddUser(authCode string, token string) error
 	GetUser(id string) (*models.User, error)

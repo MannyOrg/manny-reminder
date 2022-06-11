@@ -10,10 +10,10 @@ type Handler interface {
 }
 
 type HandlerImpl struct {
-	as Service
+	as AuthService
 }
 
-func NewHandler(as Service) *HandlerImpl {
+func NewHandler(as AuthService) *HandlerImpl {
 	return &HandlerImpl{as: as}
 }
 

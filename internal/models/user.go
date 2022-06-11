@@ -7,3 +7,5 @@ type User struct {
 	Email *string    `json:"email"`
 	Token *string    `json:"-"`
 }
+
+type Users []User

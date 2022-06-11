@@ -5,37 +5,12 @@ import (
 	"golang.org/x/oauth2"
 	"log"
 	"manny-reminder/internal/models"
+	"manny-reminder/mocks"
 	"testing"
 )
 
-type RepositoryMock struct {
-	Users []models.User
-}
-
-func (r RepositoryMock) GetUsers() ([]models.User, error) {
-	return r.Users, nil
-}
-
-func (r RepositoryMock) GetUser(userId string) (models.User, error) {
-	for _, user := range r.Users {
-		if user.Id.String() == userId {
-			return user, nil
-		}
-	}
-
-	return models.User{}, nil
-}
-
-func (r RepositoryMock) AddUser(string, string) error {
-	return nil
-}
-
-func NewRepositoryMock() *RepositoryMock {
-	return &RepositoryMock{}
-}
-
 func TestGetUsers_EmptyResponse(t *testing.T) {
-	as, _ := getService()
+	as, _ := getService(t)
 
 	users, err := as.GetUsers()
 
@@ -44,9 +19,9 @@ func TestGetUsers_EmptyResponse(t *testing.T) {
 }
 
 func TestGetUsers_OneUser(t *testing.T) {
-	as, r := getService()
+	as, _ := getService(t)
 
-	r.Users = []models.User{
+	users := []models.User{
 		{},
 	}
 
@@ -58,9 +33,9 @@ func TestGetUsers_OneUser(t *testing.T) {
 }
 
 func TestGetUsers_MultipleUsers(t *testing.T) {
-	as, r := getService()
+	as, _ := getService(t)
 
-	r.Users = []models.User{
+	users := []models.User{
 		{},
 		{},
 		{},
@@ -74,9 +49,9 @@ func TestGetUsers_MultipleUsers(t *testing.T) {
 	assert.Exactly(t, 4, len(users))
 }
 
-func getService() (*ServiceImpl, *RepositoryMock) {
+func getService(t *testing.T) (*ServiceImpl, *mocks.AuthRepository) {
 	l := log.Default()
-	r := NewRepositoryMock()
+	r := mocks.NewAuthRepository(t)
 	c := &oauth2.Config{}
 	as := NewService(l, r, c)
 	return as, r

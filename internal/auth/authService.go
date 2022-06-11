@@ -11,7 +11,7 @@ import (
 	"os"
 )
 
-type Service interface {
+type AuthService interface {
 	SaveUser(authCode string) error
 	GetUsers() ([]models.User, error)
 	GetTokenFromWeb() string
@@ -21,11 +21,11 @@ type Service interface {
 
 type ServiceImpl struct {
 	l      *log.Logger
-	r      Repository
+	r      AuthRepository
 	config *oauth2.Config
 }
 
-func NewService(l *log.Logger, r Repository, config *oauth2.Config) *ServiceImpl {
+func NewService(l *log.Logger, r AuthRepository, config *oauth2.Config) *ServiceImpl {
 	return &ServiceImpl{l, r, config}
 }
 

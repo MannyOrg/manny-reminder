@@ -5,7 +5,7 @@ import (
 	"log"
 )
 
-type Repository interface {
+type EventsRepository interface {
 }
 
 type RepositoryImpl struct {

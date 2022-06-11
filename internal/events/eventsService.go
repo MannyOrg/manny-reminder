@@ -11,19 +11,19 @@ import (
 	"manny-reminder/internal/models"
 )
 
-type Service interface {
+type EventsService interface {
 	GetUsersEvents(pageToken string, size int) (map[string]models.EventsResponse, error)
 	GetUserEvents(userId string, pageToken string, size int) (models.EventsResponse, error)
 }
 
 type ServiceImpl struct {
 	l  *log.Logger
-	r  Repository
-	as auth.Service
+	r  EventsRepository
+	as auth.AuthService
 	c  calendar2.Calendar
 }
 
-func NewService(r Repository, l *log.Logger, as auth.Service, c calendar2.Calendar) *ServiceImpl {
+func NewService(r EventsRepository, l *log.Logger, as auth.AuthService, c calendar2.Calendar) *ServiceImpl {
 	return &ServiceImpl{l: l, r: r, as: as, c: c}
 }
 

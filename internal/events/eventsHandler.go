@@ -8,14 +8,14 @@ import (
 	"strconv"
 )
 
-type Handler interface {
+type EventsHandler interface {
 }
 
 type HandlerImpl struct {
-	es Service
+	es EventsService
 }
 
-func NewHandler(es Service) *HandlerImpl {
+func NewHandler(es EventsService) *HandlerImpl {
 	return &HandlerImpl{es: es}
 }
 
