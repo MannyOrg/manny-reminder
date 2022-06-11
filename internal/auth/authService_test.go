@@ -10,8 +10,9 @@ import (
 )
 
 func TestGetUsers_EmptyResponse(t *testing.T) {
-	as, _ := getService(t)
-
+	as, r := getService(t)
+	var mockedUsers models.Users
+	mockAuthServiceGetUsers(r, mockedUsers, nil)
 	users, err := as.GetUsers()
 
 	assert.Nil(t, err)
@@ -19,11 +20,12 @@ func TestGetUsers_EmptyResponse(t *testing.T) {
 }
 
 func TestGetUsers_OneUser(t *testing.T) {
-	as, _ := getService(t)
+	as, r := getService(t)
 
 	users := []models.User{
 		{},
 	}
+	mockAuthServiceGetUsers(r, users, nil)
 
 	users, err := as.GetUsers()
 
@@ -33,7 +35,7 @@ func TestGetUsers_OneUser(t *testing.T) {
 }
 
 func TestGetUsers_MultipleUsers(t *testing.T) {
-	as, _ := getService(t)
+	as, r := getService(t)
 
 	users := []models.User{
 		{},
@@ -41,6 +43,7 @@ func TestGetUsers_MultipleUsers(t *testing.T) {
 		{},
 		{},
 	}
+	mockAuthServiceGetUsers(r, users, nil)
 
 	users, err := as.GetUsers()
 
@@ -55,4 +58,8 @@ func getService(t *testing.T) (*ServiceImpl, *mocks.AuthRepository) {
 	c := &oauth2.Config{}
 	as := NewService(l, r, c)
 	return as, r
+}
+
+func mockAuthServiceGetUsers(as *mocks.AuthRepository, users []models.User, err error) {
+	as.On("GetUsers").Return(users, err)
 }

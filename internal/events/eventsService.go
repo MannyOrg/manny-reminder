@@ -79,5 +79,5 @@ func (s ServiceImpl) getUserEvents(ctx context.Context, user *models.User, pageT
 		return models.EventsResponse{Items: result, NextPageToken: ""}, nil
 	}
 
-	return models.EventsResponse{Items: result, NextPageToken: npt}, nil
+	return models.EventsResponse{Items: *events, NextPageToken: npt}, nil
 }
