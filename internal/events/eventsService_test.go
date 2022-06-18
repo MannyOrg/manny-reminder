@@ -125,6 +125,17 @@ func TestService_GetUserEvents_UserDoesNotExist(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Empty(t, events)
 }
+func TestService_GetUserEvents_GetUserErr(t *testing.T) {
+	_, as, _, es := initService(t)
+
+	mockAuthServiceGetUser(as, nil, errors.New(test_error_msg))
+
+	events, err := es.GetUserEvents(uuid.New().String(), "", 10)
+
+	assert.NotNil(t, err)
+	assert.Equal(t, test_error_msg, err.Error())
+	assert.Empty(t, events)
+}
 
 func TestService_GetUserEvents_NoUserEvents(t *testing.T) {
 	_, as, c, es := initService(t)
@@ -136,6 +147,48 @@ func TestService_GetUserEvents_NoUserEvents(t *testing.T) {
 	events, err := es.GetUserEvents(uuid.New().String(), "", 10)
 
 	assert.Nil(t, err)
+	assert.Empty(t, events)
+}
+
+func TestService_GetUserEvents_UserTokenExpired(t *testing.T) {
+	_, as, c, es := initService(t)
+
+	users := generateUsers(1)
+	expiredToken := generateUserToken(1, time.Now().Add(time.Hour*-2))
+	users[0].Token = &expiredToken
+	var tok oauth2.Token
+	_ = json.Unmarshal([]byte(generateUserToken(1, time.Now().Add(time.Hour*2))), &tok)
+
+	tokStr, _ := json.Marshal(tok)
+
+	var mockedEvents = make(map[string]models.Events)
+	user1Events := generateEvents("1", 3)
+	mockedEvents[string(tokStr)] = user1Events
+	mockAuthServiceGetUser(as, &(users[0]), nil)
+	mockAuthServiceRefreshUser(as, &tok, nil)
+	mockCalendarGetEventsForUser(c, mockedEvents, nil)
+
+	events, err := es.GetUserEvents(uuid.New().String(), "", 10)
+
+	assert.Nil(t, err)
+	assert.NotEmpty(t, events)
+	assert.Exactly(t, 3, len(events.Items))
+}
+
+func TestService_GetUserEvents_UserTokenExpiredInvalidRefresh(t *testing.T) {
+	_, as, _, es := initService(t)
+
+	users := generateUsers(1)
+	expiredToken := generateUserToken(1, time.Now().Add(time.Hour*-2))
+	users[0].Token = &expiredToken
+
+	mockAuthServiceGetUser(as, &(users[0]), nil)
+	mockAuthServiceRefreshUser(as, nil, errors.New(test_error_msg))
+
+	events, err := es.GetUserEvents(uuid.New().String(), "", 10)
+
+	assert.NotNil(t, err)
+	assert.Equal(t, test_error_msg, err.Error())
 	assert.Empty(t, events)
 }
 
@@ -171,6 +224,10 @@ func mockAuthServiceGetUsers(as *mocks.AuthService, users []models.User, err err
 
 func mockAuthServiceGetUser(as *mocks.AuthService, user *models.User, err error) {
 	as.On("GetUser", mock.Anything).Return(user, err)
+}
+
+func mockAuthServiceRefreshUser(as *mocks.AuthService, tok *oauth2.Token, err error) {
+	as.On("RefreshUser", mock.Anything).Return(tok, err)
 }
 
 func mockCalendarGetEventsForUser(c *mocks.Calendar, events map[string]models.Events, err error) {
@@ -219,7 +276,7 @@ func generateUsers(amount int) models.Users {
 }
 
 func generateUserToken(i int, expiry time.Time) string {
-	expiryStr := time.Now().Add(time.Hour * 2).Format(time.RFC3339)
+	expiryStr := expiry.Format(time.RFC3339)
 	token := "{\"access_token\":\"test %s\",\"token_type\":\"Bearer\",\"refresh_token\":\"test\",\"expiry\":\"%s\"}"
 	userToken := fmt.Sprintf(token, strconv.Itoa(i+1), expiryStr)
 	return userToken

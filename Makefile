@@ -10,3 +10,6 @@ generate_mocks_all:
 
 generate_mocks:
 	docker run -v "${PWD}":/src -w /src vektra/mockery --name=${I} --recursive=true
+
+run:
+	cd cmd/manny-reminder/ && go run . && cd ../../

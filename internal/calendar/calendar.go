@@ -22,6 +22,7 @@ func NewCalendar(c *oauth2.Config) *GoogleCalendar {
 }
 
 func (c GoogleCalendar) GetEventsForUser(ctx context.Context, tok oauth2.Token, pageToken string, size int) (*models.Events, string, error) {
+
 	client := c.config.Client(context.Background(), &tok)
 
 	srv, err := calendar.NewService(ctx, option.WithHTTPClient(client))

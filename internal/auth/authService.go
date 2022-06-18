@@ -83,7 +83,7 @@ func (s ServiceImpl) RefreshUser(user *models.User) (*oauth2.Token, error) {
 		return nil, err
 	}
 
-	tokenSource := s.config.TokenSource(context.Background(), &tok)
+	tokenSource := s.config.TokenSource(context.TODO(), &tok)
 	updatedToken, err := tokenSource.Token()
 	if err != nil {
 		return nil, err

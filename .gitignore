@@ -218,8 +218,9 @@ fabric.properties
 
 # End of https://www.toptal.com/developers/gitignore/api/goland,go,visualstudiocode,rider
 
-credentials.json
-token.json
+cmd/manny-reminder/credentials.json
+cmd/manny-reminder/token.json
+cmd/manny-reminder/users/*
 users/*
 .idea/*
-.env
+cmd/manny-reminder/.env
