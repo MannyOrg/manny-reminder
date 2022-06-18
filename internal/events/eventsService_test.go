@@ -14,6 +14,7 @@ import (
 	"manny-reminder/mocks"
 	"strconv"
 	"testing"
+	"time"
 )
 
 const test_error_msg = "test error occured"
@@ -46,14 +47,7 @@ func TestService_GetUsersEvents_WhenAsErr_Err(t *testing.T) {
 func TestService_GetUsersEvents_WhenUsersAndNoEvents(t *testing.T) {
 	_, as, c, es := initService(t)
 
-	userToken := "{\"access_token\":\"test\",\"token_type\":\"Bearer\",\"refresh_token\":\"test\",\"expiry\":\"2022-06-04T17:36:36.65039945+03:00\"}"
-	uuid1, _ := uuid.NewUUID()
-	uuid2, _ := uuid.NewUUID()
-
-	users := []models.User{
-		{Id: &uuid1, Token: &userToken},
-		{Id: &uuid2, Token: &userToken},
-	}
+	users := generateUsers(2)
 	mockedEvents := make(map[string]models.Events)
 	mockAuthServiceGetUsers(as, users, nil)
 	mockCalendarGetEventsForUser(c, mockedEvents, nil)
@@ -72,26 +66,16 @@ func TestService_GetUsersEvents_WhenUsersAndNoEvents(t *testing.T) {
 func TestService_GetUsersEvents_WhenUsersAndEvents(t *testing.T) {
 	_, as, c, es := initService(t)
 
-	userToken1 := "{\"access_token\":\"test1\",\"expiry\":\"2022-06-04T17:36:36.65039945+03:00\"}"
-	userToken2 := "{\"access_token\":\"test2\",\"expiry\":\"2022-06-04T17:36:36.65039945+03:00\"}"
-	userToken3 := "{\"access_token\":\"test3\",\"expiry\":\"2022-06-04T17:36:36.65039945+03:00\"}"
-	uuid1 := uuid.New()
-	uuid2 := uuid.New()
-	uuid3 := uuid.New()
-	users := []models.User{
-		{Id: &uuid1, Token: &userToken1},
-		{Id: &uuid2, Token: &userToken2},
-		{Id: &uuid3, Token: &userToken3},
-	}
+	users := generateUsers(3)
 	mockAuthServiceGetUsers(as, users, nil)
 
 	mockedEvents := make(map[string]models.Events)
 	user1Events := generateEvents("1", 3)
-	mockedEvents[userToken1] = user1Events
+	mockedEvents[*users[0].Token] = user1Events
 	user2Events := generateEvents("2", 2)
-	mockedEvents[userToken2] = user2Events
+	mockedEvents[*users[1].Token] = user2Events
 	user3Events := generateEvents("3", 0)
-	mockedEvents[userToken3] = user3Events
+	mockedEvents[*users[2].Token] = user3Events
 
 	mockCalendarGetEventsForUser(c, mockedEvents, nil)
 
@@ -101,30 +85,26 @@ func TestService_GetUsersEvents_WhenUsersAndEvents(t *testing.T) {
 	assert.NotEmpty(t, events)
 	assert.Exactly(t, 3, len(events))
 
-	assert.NotEmpty(t, events[uuid1.String()].Items)
-	assert.Exactly(t, 3, len(events[uuid1.String()].Items))
-	assert.Exactly(t, events[uuid1.String()].NextPageToken, "")
+	assert.NotEmpty(t, events[users[0].Id.String()].Items)
+	assert.Exactly(t, 3, len(events[users[0].Id.String()].Items))
+	assert.Exactly(t, events[users[0].Id.String()].NextPageToken, "")
 
-	assert.NotEmpty(t, events[uuid2.String()].Items)
-	assert.Exactly(t, 2, len(events[uuid2.String()].Items))
-	assert.Exactly(t, events[uuid2.String()].NextPageToken, "")
+	assert.NotEmpty(t, events[users[1].Id.String()].Items)
+	assert.Exactly(t, 2, len(events[users[1].Id.String()].Items))
+	assert.Exactly(t, events[users[1].Id.String()].NextPageToken, "")
 
-	assert.Empty(t, events[uuid3.String()].Items)
-	assert.Exactly(t, events[uuid3.String()].NextPageToken, "")
+	assert.Empty(t, events[users[2].Id.String()].Items)
+	assert.Exactly(t, events[users[2].Id.String()].NextPageToken, "")
 }
 
 func TestService_GetUsersEvents_UserInvalidToken(t *testing.T) {
 	_, as, _, es := initService(t)
 
 	userToken := "invalid-token-obs"
-	uuid1, _ := uuid.NewUUID()
-	uuid2, _ := uuid.NewUUID()
-	users := []models.User{
-		{Id: &uuid1, Token: &userToken},
-		{Id: &uuid2, Token: &userToken},
-	}
+	users := generateUsers(2)
 	mockedEvents := make(map[string]models.Events)
 	user1Events := generateEvents("1", 0)
+	users[0].Token = &userToken
 	mockedEvents[userToken] = user1Events
 
 	mockAuthServiceGetUsers(as, users, nil)
@@ -149,10 +129,7 @@ func TestService_GetUserEvents_UserDoesNotExist(t *testing.T) {
 func TestService_GetUserEvents_NoUserEvents(t *testing.T) {
 	_, as, c, es := initService(t)
 
-	userToken := "{\"access_token\":\"test\",\"token_type\":\"Bearer\",\"refresh_token\":\"test\",\"expiry\":\"2022-06-04T17:36:36.65039945+03:00\"}"
-	uuid1, _ := uuid.NewUUID()
-
-	users := []models.User{{Id: &uuid1, Token: &userToken}}
+	users := generateUsers(1)
 	mockAuthServiceGetUser(as, &(users[0]), nil)
 	mockCalendarGetEventsForUser(c, make(map[string]models.Events), nil)
 
@@ -165,14 +142,10 @@ func TestService_GetUserEvents_NoUserEvents(t *testing.T) {
 func TestService_GetUserEvents_UserEvents(t *testing.T) {
 	_, as, c, es := initService(t)
 
-	userToken := "{\"access_token\":\"test\",\"token_type\":\"Bearer\",\"refresh_token\":\"test\",\"expiry\":\"2022-06-04T17:36:36.65039945+03:00\"}"
-	uuid1, _ := uuid.NewUUID()
-
-	users := []models.User{{Id: &uuid1, Token: &userToken}}
-
+	users := generateUsers(1)
 	var mockedEvents = make(map[string]models.Events)
 	user1Events := generateEvents("1", 3)
-	mockedEvents[userToken] = user1Events
+	mockedEvents[*users[0].Token] = user1Events
 
 	mockAuthServiceGetUser(as, &(users[0]), nil)
 	mockCalendarGetEventsForUser(c, mockedEvents, nil)
@@ -233,4 +206,21 @@ func generateEvents(prefix string, count int) models.Events {
 	}
 
 	return events
+}
+
+func generateUsers(amount int) models.Users {
+	var users models.Users
+	for i := 0; i < amount; i++ {
+		id, _ := uuid.NewUUID()
+		userToken := generateUserToken(i, time.Now().Add(time.Hour*2))
+		users = append(users, models.User{Id: &id, Token: &userToken})
+	}
+	return users
+}
+
+func generateUserToken(i int, expiry time.Time) string {
+	expiryStr := time.Now().Add(time.Hour * 2).Format(time.RFC3339)
+	token := "{\"access_token\":\"test %s\",\"token_type\":\"Bearer\",\"refresh_token\":\"test\",\"expiry\":\"%s\"}"
+	userToken := fmt.Sprintf(token, strconv.Itoa(i+1), expiryStr)
+	return userToken
 }

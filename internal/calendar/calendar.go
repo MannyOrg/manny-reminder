@@ -39,6 +39,7 @@ func (c GoogleCalendar) GetEventsForUser(ctx context.Context, tok oauth2.Token, 
 		PageToken(pageToken).
 		OrderBy("startTime").
 		Do()
+
 	if err != nil {
 		return nil, "", err
 	}

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"database/sql"
+	"github.com/google/uuid"
 	"log"
 	"manny-reminder/internal/models"
 )
@@ -10,6 +11,7 @@ type AuthRepository interface {
 	GetUsers() ([]models.User, error)
 	AddUser(authCode string, token string) error
 	GetUser(id string) (*models.User, error)
+	UpdateUserToken(id *uuid.UUID, token string) error
 }
 
 type RepositoryImpl struct {
@@ -60,6 +62,15 @@ func (r RepositoryImpl) GetUser(userId string) (*models.User, error) {
 
 func (r RepositoryImpl) AddUser(id, token string) error {
 	_, err := r.db.Exec("INSERT INTO users (id, token) VALUES ($1, $2)", id, token)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r RepositoryImpl) UpdateUserToken(id *uuid.UUID, token string) error {
+	_, err := r.db.Exec("UPDATE users (token) VALUES ($2) WHERE Id = '$1'", id, token)
 	if err != nil {
 		return err
 	}

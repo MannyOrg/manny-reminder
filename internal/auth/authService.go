@@ -17,6 +17,7 @@ type AuthService interface {
 	GetTokenFromWeb() string
 	GetClient(user string) *http.Client
 	GetUser(id string) (*models.User, error)
+	RefreshUser(user *models.User) (*oauth2.Token, error)
 }
 
 type ServiceImpl struct {
@@ -55,23 +56,6 @@ func (s *ServiceImpl) GetTokenFromWeb() string {
 	return authURL
 }
 
-// Retrieves a token from a local file.
-func (s *ServiceImpl) tokenFromFile(file string) (*oauth2.Token, error) {
-	f, err := os.Open(file)
-	if err != nil {
-		return nil, err
-	}
-	defer func(f *os.File) {
-		err := f.Close()
-		if err != nil {
-			s.l.Fatalf(err.Error())
-		}
-	}(f)
-	tok := &oauth2.Token{}
-	err = json.NewDecoder(f).Decode(tok)
-	return tok, err
-}
-
 func (s ServiceImpl) SaveUser(authCode string) error {
 	tok, err := s.config.Exchange(context.TODO(), authCode)
 	if err != nil {
@@ -90,4 +74,47 @@ func (s ServiceImpl) SaveUser(authCode string) error {
 	}
 
 	return nil
+}
+
+func (s ServiceImpl) RefreshUser(user *models.User) (*oauth2.Token, error) {
+	var tok oauth2.Token
+	err := json.Unmarshal([]byte(*user.Token), &tok)
+	if err != nil {
+		return nil, err
+	}
+
+	tokenSource := s.config.TokenSource(context.Background(), &tok)
+	updatedToken, err := tokenSource.Token()
+	if err != nil {
+		return nil, err
+	}
+
+	ts, err := json.Marshal(updatedToken)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.r.UpdateUserToken(user.Id, string(ts))
+	if err != nil {
+		return nil, err
+	}
+
+	return &tok, nil
+}
+
+// Retrieves a token from a local file.
+func (s *ServiceImpl) tokenFromFile(file string) (*oauth2.Token, error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			s.l.Fatalf(err.Error())
+		}
+	}(f)
+	tok := &oauth2.Token{}
+	err = json.NewDecoder(f).Decode(tok)
+	return tok, err
 }

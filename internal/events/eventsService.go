@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"golang.org/x/oauth2"
 	calendar2 "manny-reminder/internal/calendar"
+	"time"
 
 	"log"
 	"manny-reminder/internal/auth"
@@ -67,13 +68,20 @@ func (s ServiceImpl) GetUserEvents(userId string, pageToken string, size int) (m
 
 func (s ServiceImpl) getUserEvents(ctx context.Context, user *models.User, pageToken string, size int) (models.EventsResponse, error) {
 	var result []models.Event
-	var tok oauth2.Token
+	var tok *oauth2.Token
 	err := json.Unmarshal([]byte(*user.Token), &tok)
 	if err != nil {
 		return models.EventsResponse{}, err
 	}
 
-	events, npt, err := s.c.GetEventsForUser(ctx, tok, pageToken, size)
+	if tok.Expiry.Before(time.Now()) {
+		tok, err = s.as.RefreshUser(user)
+		if err != nil {
+			return models.EventsResponse{}, err
+		}
+	}
+
+	events, npt, err := s.c.GetEventsForUser(ctx, *tok, pageToken, size)
 
 	if events == nil || len(*events) == 0 {
 		return models.EventsResponse{Items: result, NextPageToken: ""}, nil
